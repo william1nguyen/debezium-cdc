@@ -90,8 +90,6 @@ services:
       OFFSET_STORAGE_TOPIC: offset-storage
       STATUS_STORAGE_TOPIC: status-storage
       CONNECT_TOPIC_CREATION_ENABLE: true
-
-
     networks:
       - private_network
     healthcheck:
@@ -101,10 +99,46 @@ services:
       retries: 5
       start_period: 60s
 
+  clickhouse:
+    image: bitnami/clickhouse:24
+    container_name: clickhouse
+    hostname: clickhouse
+    ports:
+      - 8123:8123
+      - 9090:9090
+    volumes:
+      - clickhouse_data:/bitnami/clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_ADMIN_USER: admin
+      CLICKHOUSE_ADMIN_PASSWORD: password
+    networks:
+      - private_network
+  
+  vector:
+    depends_on:
+      - kafka
+      - clickhouse
+    image: timberio/vector:0.41.0-debian
+    container_name: vector
+    hostname: vector
+    ports:
+      - 8686:8686
+    volumes:
+      - ./vector.yaml:/etc/vector/vector.yaml:ro
+      - vector_data:/var/lib/vector
+    restart: unless-stopped
+    networks:
+      - private_network
+
 volumes:
   postgres_data:
     driver: local
   kafka_data:
+    driver: local
+  clickhouse_data:
+    driver: local
+  vector_data:
     driver: local
 
 networks:

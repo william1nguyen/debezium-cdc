@@ -1,0 +1,48 @@
+data_dir: /var/lib/vector
+
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+sources: 
+  kafka:
+    type: kafka
+    bootstrap_servers: kafka:9092
+    group_id: vector-consumer
+    topics:
+      - demo-topic.public.demo_table
+    auto_offset_reset: earliest
+    session_timeout_ms: 60000
+  
+transforms: 
+  parse_kafka_message:
+    type: remap
+    inputs:
+      - kafka
+    source: |
+      .parsed = parse_json!(.message)
+      . = {
+        "id": to_int!(.parsed.payload.after.id),
+        "message": to_string!(.parsed.payload.after.message)
+      }
+
+sinks: 
+  debug:
+    inputs:
+      - parse_kafka_message
+    type: console
+    encoding:
+      codec: json
+  
+  clickhouse_sync:
+    type: clickhouse
+    inputs:
+      - parse_kafka_message
+    endpoint: http://clickhouse:8123
+    database: default
+    table: demo
+    auth:
+      strategy: basic
+      user: admin
+      password: password
+    format: json_each_row
