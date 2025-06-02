@@ -1,37 +1,51 @@
-# debezium-CDC
+# Debezium CDC Pipeline
 
-### Connect Debezium with Postgres
+A simple change data capture (CDC) pipeline that captures PostgreSQL changes using Debezium, streams them via Kafka, processes them with Vector, and persists into ClickHouse.
 
-- Create `demo` table
-  ```
-  CREATE TABLE IF NOT EXISTS demo_table(
-    id SERIAL PRIMARY KEY,
-    message VARCHAR(255) NOT NULL
-  )
-  ```
+## Tech Stack
 
-- Register new `connector` with `debezium-connector`
-  ```
-  curl -X POST http://localhost:8083/connectors \
-    -H "Content-Type: application/json" \
-    -H "Accept: application/json" \
-    -d @debezium.json
-  ```
+- Postgres
+- Debezium
+- Kafka
+- Vector
+- ClickHouse
 
+## Data Flow
 
-### Clickhouse support
+Postgres (change) → Debezium → Kafka → Vector → ClickHouse
+
+## Getting Started
+
+### 1. Create Source Table in Postgres
+
+```sql
+CREATE TABLE IF NOT EXISTS demo_table (
+  id SERIAL PRIMARY KEY,
+  message VARCHAR(255) NOT NULL
+);
 ```
--- Create the table to match your Debezium payload structure
+
+### 2. Register Debezium Connector
+
+```bash
+curl -X POST http://localhost:8083/connectors \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d @debezium.json
+```
+
+### 3. Create Destination Table in ClickHouse
+
+```sql
 CREATE TABLE IF NOT EXISTS demo (
-    id Int32,
-    message String
+  id Int32,
+  message String
 ) ENGINE = MergeTree()
 ORDER BY id;
 ```
 
-### Test
+### 4. Insert Test Data
 
-- Insert new data
-  ```
-  INSERT INTO demo_table (message) VALUES ('Message');
-  ```
+```sql
+INSERT INTO demo_table (message) VALUES ('Message');
+```
